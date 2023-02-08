@@ -9,7 +9,7 @@ default_dict = dict(
 )
 
 fast_only_dict = dict(thresh = 768, step_size = 256)
-slow_only_dict = dict(thresh = 1024,step_size = 128)
+slow_only_dict = dict(thresh = 2048,step_size = 128)
 
 fast_dict = {**default_dict, **fast_only_dict}
 slow_dict = {**default_dict, **slow_only_dict}
@@ -23,6 +23,9 @@ BUCKET_URL = "https://storage.googleapis.com/maestro-bucket1/"
 
 #(TODO) DB로 바꿔야함.
 MODULE_PATH = "../oemer"
+
+DEFAULT_EMAIL = "unkwon@unkwon.com"
+
 
 for k,v in paths.items():
     if not os.path.exists(v):

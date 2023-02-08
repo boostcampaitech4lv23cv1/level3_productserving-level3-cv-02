@@ -9,6 +9,8 @@ __pycache__
 *.png
 data/output/*
 
+results
+
 !metric/*
 !MusicXML2Audio/data/.xml
 
@@ -16,6 +18,9 @@ data/output/*
 *.h5
 *.onnx
 *.musicxml
+
+app/env.sh
+app/secret.py
 
 #db, bucket 설정 관련
 app/env.sh

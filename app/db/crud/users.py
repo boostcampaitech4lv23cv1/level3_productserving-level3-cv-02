@@ -4,8 +4,13 @@ from db.models import users as users_model
 from utils import hashpw, checkpw
 
 #유저 신규 생성
-def create_user(db: Session, user:users_schemas.UserCreate):
+def create_user(db: Session, user:users_schemas.UserCreate):    
     new_user = users_model.Users(user_email=user.user_email, user_password=user.user_password, auth_yn=False)
+    
+    if get_user_by_email(db, user.user_email) is not None:
+        print("Already Existing email")
+        return None
+    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

@@ -52,14 +52,22 @@ def scan_dot(symbols, note_id_map, bbox, unit_size, min_count, max_count):
     return False
 
 
-def parse_dot(min_area_ratio=0.08, max_area_ratio=0.2):
+def parse_dot(min_area_ratio=0.08, max_area_ratio=0.2, 
+              groups = None, 
+              symbols = None, 
+              stems = None, 
+              clefs_sfns = None,  
+              notes = None, 
+              note_id_map = None, 
+              staffs = None
+              ):
     # Fetch parameters
-    groups = layers.get_layer('note_groups')
-    symbols = layers.get_layer('symbols_pred')
-    stems = layers.get_layer('stems_rests_pred')
-    clefs_sfns = layers.get_layer('clefs_keys_pred')
-    notes = layers.get_layer('notes')
-    note_id_map = layers.get_layer('note_id')
+    # groups = layers.get_layer('note_groups')
+    # symbols = layers.get_layer('symbols_pred')
+    # stems = layers.get_layer('stems_rests_pred')
+    # clefs_sfns = layers.get_layer('clefs_keys_pred')
+    # notes = layers.get_layer('notes')
+    # note_id_map = layers.get_layer('note_id')
 
     # Post-process necessary variables
     no_stem = np.where(symbols-stems-clefs_sfns>0, 1, 0)
@@ -72,7 +80,7 @@ def parse_dot(min_area_ratio=0.08, max_area_ratio=0.2):
     for group in groups:
         nids = group.note_ids
         gbox = group.bbox
-        unit_size = get_unit_size(*get_center(gbox))
+        unit_size = get_unit_size(*get_center(gbox), staffs = staffs)
         nbox = np.array([notes[nid].bbox for nid in nids])
         nbox = (np.min(nbox[:, 0]), np.min(nbox[:, 1]), np.max(nbox[:, 2]), np.max(nbox[:, 3]))
         min_count = round(unit_size**2 * min_area_ratio)
@@ -111,15 +119,26 @@ def polish_symbols(staff_pred, symbols, stems, clefs_sfns, group_map):
     return beams
 
 
-def parse_beams(min_area_ratio=0.07, min_tp_ratio=0.4, min_width_ratio=0.2):
+def parse_beams(min_area_ratio=0.07, min_tp_ratio=0.4, min_width_ratio=0.2, 
+                staff_pred = None, 
+                symbols = None, 
+                stems = None, 
+                clefs_sfns = None,
+                group_map = None,  
+                staffs = None
+                ):
     # Fetch parameters
-    symbols = layers.get_layer('symbols_pred')
-    staff_pred = layers.get_layer('staff_pred')
-    stems = layers.get_layer('stems_rests_pred')
-    group_map = layers.get_layer('group_map')
-    clefs_sfns = layers.get_layer('clefs_keys_pred')
+    # symbols = layers.get_layer('symbols_pred')
+    # staff_pred = layers.get_layer('staff_pred')
+    # stems = layers.get_layer('stems_rests_pred')
+    # group_map = layers.get_layer('group_map')
+    # clefs_sfns = layers.get_layer('clefs_keys_pred')
 
-    beams = polish_symbols(staff_pred, symbols, stems, clefs_sfns, group_map)
+    beams = polish_symbols(staff_pred = staff_pred , 
+                           symbols = symbols, 
+                           stems = stems , 
+                           clefs_sfns = clefs_sfns, 
+                           group_map = group_map)
     beams = beams - np.where(group_map>-1, 1, 0) - stems
     beams[beams<0] = 0
 
@@ -151,7 +170,8 @@ def parse_beams(min_area_ratio=0.07, min_tp_ratio=0.4, min_width_ratio=0.2):
             continue
         cnt = cnt.astype(np.uint64)
         centers = np.sum(cnt, axis=0) / 4
-        unit_size = get_unit_size(round(centers[0]), round(centers[1]))
+        unit_size = get_unit_size(round(centers[0]), round(centers[1]), 
+                                  staffs = staffs)
 
         # Check the area size
         cv2.drawContours(ratio_map, [cnt], 0, (255, 0, 0), 2)
@@ -199,13 +219,16 @@ def parse_beams(min_area_ratio=0.07, min_tp_ratio=0.4, min_width_ratio=0.2):
     return poly_map, valid_box, invalid_map
 
 
-def parse_beam_overlap_regions(poly_map, invalid_map):
+def parse_beam_overlap_regions(poly_map, invalid_map, 
+                               symbols_pred = None, 
+                               group_map = None, 
+                               barlines = None):
     # Fetch parameters
-    symbols = layers.get_layer('symbols_pred')
-    group_map = layers.get_layer('group_map')
-    barlines = layers.get_layer('barlines')
+    # symbols = layers.get_layer('symbols_pred')
+    # group_map = layers.get_layer('group_map')
+    # barlines = layers.get_layer('barlines')
 
-    mix = poly_map + symbols #- invalid_map
+    mix = poly_map + symbols_pred #- invalid_map
     mix[mix<0] = 0
     ker = np.ones((3, 3), dtype=np.uint8)
     mix = cv2.dilate(cv2.erode(mix.astype(np.uint8), ker), ker)
@@ -257,10 +280,12 @@ def parse_beam_overlap_regions(poly_map, invalid_map):
     return out_map, map_info
 
 
-def refine_map_info(map_info):
+def refine_map_info(map_info, 
+                    groups = None, 
+                    group_map = None):
     # Fetch parameters
-    groups = layers.get_layer('note_groups')
-    group_map = layers.get_layer('group_map')
+    # groups = layers.get_layer('note_groups')
+    # group_map = layers.get_layer('group_map')
 
     new_map_info = {}
     rev_map = {}
@@ -325,7 +350,8 @@ def scan_beam_flag(
     end_y,
     threshold=0.1,
     min_width_ratio=0.25,
-    max_width_ratio=0.9):
+    max_width_ratio=0.9,
+    staffs = None):
 
     start_x = int(start_x)
     start_y = int(start_y)
@@ -340,7 +366,7 @@ def scan_beam_flag(
     if end_y < start_y:
         start_y, end_y = end_y, start_y
 
-    unit_size = get_unit_size(start_x, start_y)
+    unit_size = get_unit_size(start_x, start_y, staffs = staffs)
     min_width = unit_size * min_width_ratio
     max_width = unit_size * max_width_ratio
     for idx, x in enumerate(range(start_x, end_x)):
@@ -387,9 +413,11 @@ def scan_beam_flag(
     return 0
 
 
-def parse_inner_groups(poly_map, group, set_box, note_type_map, half_scan_width, threshold=0.1):
+def parse_inner_groups(poly_map, group, set_box, note_type_map, half_scan_width, threshold=0.1
+                       
+                       , notes = None):
     # Fetch parameters
-    notes = layers.get_layer('notes')
+    # notes = layers.get_layer('notes')
 
     nts = np.copy([notes[nid] for nid in group.note_ids])  # Copy to avoid messing the order.
     nts = sorted(nts, reverse=True)  # Will sort by staffline position
@@ -462,11 +490,16 @@ def parse_inner_groups(poly_map, group, set_box, note_type_map, half_scan_width,
                 group.top_note_ids.append(nn.id)
 
 
-def parse_rhythm(beam_map, map_info, agree_th=0.15):
+def parse_rhythm(beam_map, map_info, agree_th=0.15 , 
+                 groups = None, 
+                 notes = None, 
+                 notehead = None, 
+                 staffs = None              
+                 ):
     # Fetch parameters
-    groups = layers.get_layer('note_groups')
-    notes = layers.get_layer('notes') 
-    notehead = layers.get_layer('notehead_pred')
+    # groups = layers.get_layer('note_groups')
+    # notes = layers.get_layer('notes') 
+    # notehead = layers.get_layer('notehead_pred')
 
     # Collect neccessary information
     rev_map_info = {}
@@ -498,7 +531,7 @@ def parse_rhythm(beam_map, map_info, agree_th=0.15):
         group = groups[gid]
         gbox = group.bbox
         reg_box = rev_map_info[gid]['bbox'] if gid in rev_map_info else gbox
-        unit_size = get_unit_size(*get_center(gbox))
+        unit_size = get_unit_size(*get_center(gbox), staffs = staffs)
         half_scan_width = round(unit_size / 2)
 
         # Check stem status
@@ -517,7 +550,8 @@ def parse_rhythm(beam_map, map_info, agree_th=0.15):
                     set_box=reg_box,
                     note_type_map=note_type_map,
                     half_scan_width=half_scan_width,
-                    threshold=agree_th
+                    threshold=agree_th, 
+                    notes = notes
                 )
             continue
 
@@ -545,7 +579,7 @@ def parse_rhythm(beam_map, map_info, agree_th=0.15):
         gbox = group.bbox
         gbox = (gbox[0], min(gbox[1], reg_box[1]), gbox[2], max(gbox[3], reg_box[3]))  # Adjust only y-axis
         nbox = [notes[nid].bbox for nid in group.note_ids]
-        unit_size = get_unit_size(*get_center(gbox))
+        unit_size = get_unit_size(*get_center(gbox), staffs = staffs)
         if group.stem_up:
             cen_x = get_stem_x(gbox, nbox, unit_size)
             start_y = min(nb[1] for nb in nbox)
@@ -562,7 +596,8 @@ def parse_rhythm(beam_map, map_info, agree_th=0.15):
             start_y,
             min(reg_box[2], cen_x+half_scan_width),
             end_y,
-            threshold=agree_th
+            threshold=agree_th, 
+            staffs = staffs
         )
 
         #cv2.rectangle(beam_img, (gbox[0], gbox[1]), (gbox[2], gbox[3]), (255, 0, 255), 1)
@@ -580,22 +615,60 @@ def extract(
     dot_min_area_ratio=0.08,
     dot_max_area_ratio=0.2,
     beam_min_area_ratio=0.07,
-    agree_th=0.15):
+    agree_th=0.15, 
+    symbols = None, 
+    staffs = None, 
+    stems = None, 
+    group_map = None, 
+    clefs_sfns = None, 
+    barlines = None, 
+    groups = None, 
+    notehead = None, 
+    notes = None, 
+    note_id_map = None, 
+    staff_pred = None     
+    ):
 
     logger.debug("Parsing dot")
-    parse_dot(max_area_ratio=dot_max_area_ratio, min_area_ratio=dot_min_area_ratio)
+    parse_dot(max_area_ratio=dot_max_area_ratio, min_area_ratio=dot_min_area_ratio,
+              groups = groups, 
+              symbols = symbols,
+              stems = stems, 
+              clefs_sfns = clefs_sfns, 
+              notes = notes, 
+              note_id_map = note_id_map,
+              staffs = staffs
+              )
 
     logger.debug("Parsing beams and flags")
-    poly_map, valid_box, invalid_map = parse_beams(min_area_ratio=beam_min_area_ratio)
+    poly_map, valid_box, invalid_map = parse_beams(min_area_ratio=beam_min_area_ratio,
+                                                   staff_pred = staff_pred, 
+                                                   symbols = symbols, 
+                                                   group_map = group_map, 
+                                                   stems = stems, 
+                                                   clefs_sfns = clefs_sfns, 
+                                                   staffs = staffs
+                                                   )
 
     logger.debug("Parsing beam regions")
-    out_map, map_info = parse_beam_overlap_regions(poly_map, invalid_map)
+    out_map, map_info = parse_beam_overlap_regions(poly_map, invalid_map, 
+                                                   symbols_pred = symbols, 
+                                                   group_map = group_map, 
+                                                   barlines= barlines
+                                                   )
 
     logger.debug("Refining the map info")
-    map_info = refine_map_info(map_info)
+    map_info = refine_map_info(map_info, 
+                               groups = groups, 
+                               group_map = group_map)
 
     logger.debug("Parsing notes rhythm")
-    beam_img = parse_rhythm(out_map, map_info, agree_th=agree_th)
+    beam_img = parse_rhythm(out_map, map_info, agree_th=agree_th, 
+                            groups = groups, 
+                            notes = notes, 
+                            notehead = notehead, 
+                            staffs = staffs
+                            )
     return beam_img, valid_box
 
 

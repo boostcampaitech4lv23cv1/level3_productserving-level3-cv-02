@@ -6,8 +6,8 @@ from .utils import get_unit_size
 from .bbox import get_center
 
 
-def filter_out_of_range_bbox(bboxes):
-    zones = layers.get_layer('zones')
+def filter_out_of_range_bbox(bboxes, zones = None):
+    # zones = layers.get_layer('zones')
     max_x = zones[-1][-1]
     min_x = zones[0][0]
 
@@ -20,7 +20,8 @@ def filter_out_of_range_bbox(bboxes):
     return valid_box
  
 
-def filter_out_small_area(bboxes, area_size=None, area_size_func=None):
+def filter_out_small_area(bboxes, area_size=None, area_size_func=None,
+                          staffs = None):
     valid_box = []
     for box in bboxes:
         w = box[2] - box[0]
@@ -28,7 +29,7 @@ def filter_out_small_area(bboxes, area_size=None, area_size_func=None):
         if area_size is not None:
             size = area_size
         else:
-            unit_size = get_unit_size(*get_center(box))
+            unit_size = get_unit_size(*get_center(box), staffs = staffs)
             size = area_size_func(unit_size)
         if w * h > size:
             valid_box.append(box)

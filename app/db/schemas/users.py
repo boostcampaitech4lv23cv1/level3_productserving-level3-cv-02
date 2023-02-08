@@ -2,13 +2,14 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 class UserBase(BaseModel):
-    user_email: str
-
+    user_email: str    
 class Users(UserBase):
     user_id: int
     user_password: str
     auth_yn: bool
     image_bundle: List
+
+
 
 class UserCreate(UserBase):
     user_password: str

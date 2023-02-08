@@ -6,25 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="">
 
-  <title>Maestro::error</title>
+  <title>Maestro::check your e-mail</title>
 
   <link rel="canonical" href="https://getbootstrap.com/docs/5.2/examples/navbars/">
   <link href="{{url_for('static', path='/css/custom.css')}}" rel="stylesheet">
-  <link href="{{url_for('static', path='/css/error.css')}}" rel="stylesheet">
+  <link href="{{url_for('static', path='/css/check.css')}}" rel="stylesheet">
   <link href="{{url_for('static', path='/css/bootstrap.min.css')}}" rel="stylesheet">
 
   <style>
     body {
       display: flex;
       align-items: center;
-      padding-top: 40px;
+      padding-top: 20px;
       padding-bottom: 40px;
       background-color: #f5f5f5;
     }
 
-    .error_btn:hover {
+    .check_btn:hover {
       color: darkgray;
     }
+    
   </style>
 
 </head>
@@ -48,21 +49,19 @@
       <strong>Maestro</strong>
     </a>
 
-    <div class="error">
-      <h2 class="display1">ERROR!</h2>
+    <div class="check">
+      <h2 class="display1">Check your e-mail</h2>
       <div class="display2">
-        <h4 class="text">에러가 발생했습니다.</h4>
-        <h4 class="text">처음부터 다시 시작해주세요.</h4>
+        <h4 class="text">가입하신 메일 주소로 이메일 인증 번호를 전송했습니다.</h4>
+        <h4 class="text">5분 내로 메일이 도착하지 않는다면, 인증 번호 재전송 버튼을 눌러주세요.</h4>
       </div>
-      <form action="/index" enctype="multipart/form-data" method="get">
-        <!-- <input name="files" type="file" multiple> -->
-        <button type="error_btn" class="error_btn" id="main_page_btn" hidden>go to main</button>
+
       </form>
 
       </header>
 
       <main>
-        <div class="error">
+        <div class="check">
         </div>
       </main>
 
@@ -70,11 +69,7 @@
       <script src="{{url_for('static', path='/js/custom.js')}}"></script>
 
       <script>
-        window.onload = function () {
-          setTimeout(function () {
-            document.getElementById('main_page_btn').hidden = false;
-          }, 1000);
-        }
+        
       </script>
 
 </body>

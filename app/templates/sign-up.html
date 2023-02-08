@@ -14,6 +14,10 @@
   <meta name="theme-color" content="#82c96b">
 
   <link href="{{url_for('static', path='/css/sign-in.css')}}" rel="stylesheet">
+  <style>
+
+  </style>
+
 </head>
 
 <body class="text-center">
@@ -35,37 +39,35 @@
 
     <h3 class="display2">Create Your Account</h2>
 
-      <form class="margin-top-20" action="" method="post">
+      <form name="form_ex" class="margin-top-20" action="/users/sign-check" method="post" enctype="multipart/form-data" onSubmit='return false;'>
+        <div name="user">
 
-        <div class="form-floating">
-          <input type="email" name="top" class="form-control" id="floatingInput" placeholder="name@example.com">
-          <label for="floatingInput">Email address</label>
+          <div class="form-floating">
+            <input type="email" name="user_email" class="form-control" id="user_email" placeholder="name@example.com">
+            <label for="user_email">Email address</label>
+          </div>
+
+          <div class="form-floating">
+            <input type="password" name="user_password" class="form-control" id="user_password" placeholder="password">
+            <label for="user_password">Password</label>
+          </div>
+
+          <div class="form-floating">
+            <input type="password" name="password_check" class="form-control" id="password_check"
+              placeholder="Password">
+            <label for="password_check">Password check</label>
+          </div>
         </div>
 
-        <div class="form-floating">
-          <input type="username" name="middle" class="form-control" id="floatingUsername" placeholder="Username">
-          <label for="floatingUsername">Username</label>
-        </div>
-
-        <div class="form-floating">
-          <input type="password" name="middle" class="form-control" id="floatingpassword" placeholder="password">
-          <label for="floatingpassword">Password</label>
-        </div>
-
-        <div class="form-floating">
-          <input type="password" name="bottom" class="form-control" id="floatingPassword" placeholder="Password">
-          <label for="floatingPassword">Password check</label>
-        </div>
-
-        <p><input type="button" value="Create Account" onclick="location.href = '/sign-check'" class="w-100 btn btn-lg btn-primary"></p>
-
+        <p><input type="submit" value="Create Account" onclick="signUp();"
+            class="submit-btn w-100 btn btn-lg btn-primary"></p>
         <p class="text-4 text-muted">Already have an account? <a href="/sign-in">sign in</a>.</p>
 
       </form>
 
   </main>
 
-  <script src="{{url_for('static', path='/js/sign-form.js')}}"></script>
+  <script src="{{url_for('static', path='/js/sign.js')}}"></script>
 
 </body>
 

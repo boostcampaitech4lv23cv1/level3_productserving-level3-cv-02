@@ -1,5 +1,4 @@
-onnxruntime==1.8.0
-onnxruntime-gpu==1.8
+onnxruntime==1.13.1
 opencv-python>=4.5.3.56
 matplotlib
 pillow

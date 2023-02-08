@@ -48,11 +48,13 @@ class NoteGroup:
             ")\n"
 
 
-def group_noteheads():
+def group_noteheads(note_id_map = None, 
+                    notehead = None, 
+                    stems = None):
     # Fetch parameters
-    note_id_map = layers.get_layer('note_id')
-    notehead = layers.get_layer('notehead_pred')
-    stems = layers.get_layer('stems_rests_pred')
+    # note_id_map = layers.get_layer('note_id')
+    # notehead = layers.get_layer('notehead_pred')
+    # stems = layers.get_layer('stems_rests_pred')
 
     # Extend the region of stems
     ker = np.ones((3, 2), dtype=np.uint8)
@@ -120,11 +122,12 @@ def group_noteheads():
     return groups, nh_label
 
 
-def get_possible_nearby_gid(cur_note, group_map, scan_range_ratio=5):
+def get_possible_nearby_gid(cur_note, group_map, scan_range_ratio=5,
+                            staffs = None):
     bbox = cur_note.bbox
     cen_x, cen_y = get_center(bbox)
     cur_gid = group_map[cen_y, cen_x]
-    unit_size = get_unit_size(cen_x, cen_y)
+    unit_size = get_unit_size(cen_x, cen_y, staffs = staffs)
 
     w = bbox[2] - bbox[0] + 4
     start_x = bbox[0] - round(w / 2)
@@ -155,7 +158,7 @@ def get_possible_nearby_gid(cur_note, group_map, scan_range_ratio=5):
             cur_y += step
         return None, None
 
-    st1, st2 = find_closest_staffs(cen_x, cen_y)
+    st1, st2 = find_closest_staffs(cen_x, cen_y, staffs = staffs)
     y_upper = min(st1.y_upper, st2.y_upper)
     y_lower = max(st1.y_lower, st2.y_lower)
 
@@ -180,7 +183,8 @@ def get_possible_nearby_gid(cur_note, group_map, scan_range_ratio=5):
     return None
 
 
-def check_valid_new_group(ori_grp, tar_grp, group_map, max_x_diff_ratio=0.5):
+def check_valid_new_group(ori_grp, tar_grp, group_map, max_x_diff_ratio=0.5
+                          , staffs = None):
     if tar_grp is None:
         return True
 
@@ -192,15 +196,16 @@ def check_valid_new_group(ori_grp, tar_grp, group_map, max_x_diff_ratio=0.5):
     tar_box = _get_box(tar_grp)
     ori_x_cen, ori_y_cen = get_center(ori_box)
     tar_x_cen, _ = get_center(tar_box)
-    unit_size = get_unit_size(ori_x_cen, ori_y_cen)
+    unit_size = get_unit_size(ori_x_cen, ori_y_cen, staffs = staffs)
     max_x_diff = unit_size * max_x_diff_ratio
     diff = abs(tar_x_cen - ori_x_cen)
     return diff < max_x_diff
 
 
-def parse_stem_direction(groups, group_map, tolerance_ratio=0.2, max_x_diff_ratio=0.5):
+def parse_stem_direction(groups, group_map, tolerance_ratio=0.2, max_x_diff_ratio=0.5,
+                         notes = None , staffs = None):
     # Fetch parameters
-    notes = layers.get_layer('notes')
+    # notes = layers.get_layer('notes')
 
     temp_result = {}
     for gp, nids in groups.items():
@@ -231,7 +236,7 @@ def parse_stem_direction(groups, group_map, tolerance_ratio=0.2, max_x_diff_rati
         # it's a single whole note.
         if len(nids) == 1:
             nid = nids[0]
-            new_group = get_possible_nearby_gid(notes[nid], group_map)
+            new_group = get_possible_nearby_gid(notes[nid], group_map, staffs = staffs)
             if (new_group is not None) and check_valid_new_group(gp, new_group, group_map, max_x_diff_ratio):
                 if new_group in temp_result:
                     notes[nid].stem_up = temp_result[new_group]
@@ -246,8 +251,8 @@ def parse_stem_direction(groups, group_map, tolerance_ratio=0.2, max_x_diff_rati
     return groups, group_map
 
 
-def check_group(group):
-    notes = layers.get_layer('notes')
+def check_group(group, notes = None, staffs = None):
+    # notes = layers.get_layer('notes')
 
     if group.has_stem and group.stem_up is not None:
         # Check stem's height
@@ -257,7 +262,7 @@ def check_group(group):
             diff = abs(box[1] - np.min(ny_bound[:, 0]))
         else:
             diff = abs(box[3] - np.max(ny_bound[:, 1]))
-        unit_size = get_unit_size(*get_center(box))
+        unit_size = get_unit_size(*get_center(box), staffs = staffs)
         if diff < unit_size:
             for nid in group.note_ids:
                 notes[nid].invalid = True
@@ -265,9 +270,9 @@ def check_group(group):
     return True
 
 
-def gen_groups(groups, group_map):
+def gen_groups(groups, group_map, notes = None, staffs = None):
     # Fetch parameters
-    notes = layers.get_layer('notes')
+    # notes = layers.get_layer('notes')
 
     global grp_img
     grp_img = np.copy(group_map)
@@ -320,7 +325,7 @@ def gen_groups(groups, group_map):
         if not (same_track and same_group):
             y_mass_center = (gbox[1] + gbox[3]) / 2
             x_mass_center = (gbox[0] + gbox[2]) / 2
-            st, _ = find_closest_staffs(x_mass_center, y_mass_center)
+            st, _ = find_closest_staffs(x_mass_center, y_mass_center, staffs = staffs)
             tar_track = st.track
             tar_group = st.group
             for nid in nids:
@@ -336,9 +341,9 @@ def gen_groups(groups, group_map):
     return ngs, new_map
 
 
-def post_check_groups(groups):
+def post_check_groups(groups, notes = None):
     # Fetch parameters
-    notes = layers.get_layer('notes')
+    # notes = layers.get_layer('notes', notes= None)
 
     for grp in groups:
         if len(grp.note_ids) != 2:
@@ -347,25 +352,36 @@ def post_check_groups(groups):
             continue
 
 
-def extract():
+def extract(note_id_map = None, 
+            notehead = None, 
+            stems = None,
+            notes = None,
+            staffs = None):
     # Start process
     logger.debug("Grouping noteheads")
-    groups, group_map = group_noteheads()
+    groups, group_map = group_noteheads( note_id_map = note_id_map
+                                        , notehead = notehead
+                                        , stems = stems
+                                        )
 
     logger.debug("Analyzing stem direction")
-    groups, group_map = parse_stem_direction(groups, group_map)
+    groups, group_map = parse_stem_direction(groups, group_map, 
+                                             notes = notes, 
+                                             staffs = staffs)
 
     logger.debug("Instanitiating note groups")
-    groups, group_map = gen_groups(groups, group_map)
+    groups, group_map = gen_groups(groups, group_map,
+                                   notes = notes, 
+                                   staffs = staffs)
 
     logger.debug("Post check notes in groups")
 
     return groups, group_map
 
 
-def predict_symbols():
-    pred = layers.get_layer('celfs_keys_pred')  # sfn -> sharp, flat, natural
-    #pred = layers.get_layer('stems_rests_pred')
+def predict_symbols(pred = None):
+    # pred = layers.get_layer('celfs_keys_pred')  # sfn -> sharp, flat, natural
+    #pred = layers.get_layer('stems_rests_pred') #(TODO, sangmo) 만약 안된다면 이거인걸로. 얜 원래 주석쳐져있었음
     bboxes = get_bbox(pred)
     bboxes = merge_nearby_bbox(bboxes, 15)
     bboxes = rm_merge_overlap_bbox(bboxes)
@@ -411,7 +427,7 @@ if __name__ == "__main__":
     logger.info("Analyzing stem direction")
     b_groups, b_map = parse_stem_direction(a_groups, a_map)
     logger.info("Instanitiating note groups")
-    groups, c_map = gen_groups(b_groups, b_map)
+    groups, c_map = gen_groups(b_groups, b_map,)
 
     bboxes = [g.bbox for g in groups]
     out = draw_bounding_boxes(bboxes, notehead)

@@ -57,7 +57,7 @@ def generate_pred(img_path, step_size, thresh, use_tf=False):
         img_path,
         step_size = step_size, #FIXME
         use_tf=use_tf,
-        thresh =  thresh#FIXME
+        thresh =  thresh #FIXME
     )
     staff = np.where(staff_symbols_map==1, 1, 0)
     symbols = np.where(staff_symbols_map==2, 1, 0)
@@ -83,8 +83,8 @@ def generate_pred(img_path, step_size, thresh, use_tf=False):
 
 
 def polish_symbols(rgb_black_th=300):
-    img = layers.get_layer('original_image')
-    sym_pred = layers.get_layer('symbols_pred')
+    # img = layers.get_layer('original_image')
+    # sym_pred = layers.get_layer('symbols_pred')
 
     img = Image.fromarray(img).resize((sym_pred.shape[1], sym_pred.shape[0]))
     arr = np.sum(np.array(img), axis=-1)
@@ -106,10 +106,10 @@ def register_notehead_bbox(bboxes):
     return layer
 
 
-def register_note_id():
-    symbols = layers.get_layer('symbols_pred')
-    layer = layers.get_layer('note_id')
-    notes = layers.get_layer('notes')
+def register_note_id(symbols = None, layer = None, notes = None):
+    # symbols = layers.get_layer('symbols_pred')
+    # layer = layers.get_layer('note_id')
+    # notes = layers.get_layer('notes')
     for idx, note in enumerate(notes):
         x1, y1, x2, y2 = note.bbox
         yi, xi = np.where(symbols[y1:y2, x1:x2]>0)
@@ -117,6 +117,7 @@ def register_note_id():
         xi += x1
         layer[yi, xi] = idx
         notes[idx].id = idx
+    return symbols, layer, notes
 
 
 def extract(args):
@@ -172,52 +173,112 @@ def extract(args):
     # Register predictions
     symbols = symbols + clefs_keys + stems_rests
     symbols[symbols>1] = 1
-    layers.register_layer("stems_rests_pred", stems_rests)
-    layers.register_layer("clefs_keys_pred", clefs_keys)
-    layers.register_layer("notehead_pred", notehead)
-    layers.register_layer("symbols_pred", symbols)
-    layers.register_layer("staff_pred", staff)
-    layers.register_layer("original_image", image)
+    # layers.register_layer("stems_rests_pred", stems_rests)
+    # layers.register_layer("clefs_keys_pred", clefs_keys)
+    # layers.register_layer("notehead_pred", notehead)
+    # layers.register_layer("symbols_pred", symbols)
+    # layers.register_layer("staff_pred", staff)
+    # layers.register_layer("original_image", image)
 
     # ---- Extract staff lines and group informations ---- #
     logger.info("Extracting stafflines")
-    staffs, zones = staff_extract()
-    layers.register_layer("staffs", staffs)  # Array of 'Staff' instances
-    layers.register_layer("zones", zones)  # Range of each zones, array of 'range' object.
+    staffs, zones = staff_extract(staff_pred = staff
+                                  , symbols = symbols 
+                                  , stems = stems_rests
+                                  , notehead = notehead 
+                                  , clefs = clefs_keys
+                                  )  #인자를 넣어서 반환
+    # layers.register_layer("staffs", staffs)  # Array of 'Staff' instances
+    # layers.register_layer("zones", zones)  # Range of each zones, array of 'range' object.
 
     # ---- Extract noteheads ---- #
-    logger.info("Extracting noteheads")
-    notes = note_extract()
+    logger.info("Extracting noteheads") 
+    
+    notes = note_extract(
+          pred = notehead
+        , symbols = symbols
+        , zones = zones
+        , staffs = staffs
+        , stems = stems_rests
+        )
 
     # Array of 'NoteHead' instances.
-    layers.register_layer('notes', np.array(notes))
+    notes= np.array(notes)
+    # layers.register_layer('notes', np.array(notes))
 
     # Add a new layer (w * h), indicating note id of each pixel.
-    layers.register_layer('note_id', np.zeros(symbols.shape, dtype=int)-1)
-    register_note_id()
+    note_id = np.zeros(symbols.shape, dtype=int) -1
+    # layers.register_layer('note_id', np.zeros(symbols.shape, dtype=int)-1)
+    symbols, layer, notes = register_note_id(symbols = symbols,
+                     layer = note_id,
+                     notes = notes)
 
     # ---- Extract groups of note ---- #
     logger.info("Grouping noteheads")
-    groups, group_map = group_extract()
-    layers.register_layer('note_groups', np.array(groups))
-    layers.register_layer('group_map', group_map)
+    groups, group_map = group_extract(
+        note_id_map = note_id
+        , notehead = notehead
+        , stems = stems_rests
+        , notes = notes
+        , staffs = staffs 
+    ) 
+    
+    note_groups = np.array(groups)
+    group_map = group_map
+    # layers.register_layer('note_groups', np.array(groups))
+    # layers.register_layer('group_map', group_map)
+
 
     # ---- Extract symbols ---- #
     logger.info("Extracting symbols")
-    barlines, clefs, sfns, rests = symbol_extract()
-    layers.register_layer('barlines', np.array(barlines))
-    layers.register_layer('clefs', np.array(clefs))
-    layers.register_layer('sfns', np.array(sfns))
-    layers.register_layer('rests', np.array(rests))
+    barlines, clefs, sfns, rests = symbol_extract(
+        symbols = symbols , 
+        stems_rests = stems_rests , 
+        clefs_keys =  clefs_keys ,
+        group_map =  group_map ,
+        zones = zones , 
+        staffs = staffs , 
+        note_id_map = note_id , 
+        notes = notes
+    ) 
+    
+    barlines = np.array(barlines)
+    clefs = np.array(clefs)
+    sfns = np.array(sfns)
+    rests = np.array(rests)
+    # layers.register_layer('barlines', np.array(barlines))
+    # layers.register_layer('clefs', np.array(clefs))
+    # layers.register_layer('sfns', np.array(sfns))
+    # layers.register_layer('rests', np.array(rests))
 
     # ---- Parse rhythm ---- #
     logger.info("Extracting rhythm types")
-    rhythm_extract()
+    rhythm_extract(
+        symbols = symbols, 
+        staffs = staffs, 
+        stems = stems_rests , 
+        group_map = group_map, 
+        clefs_sfns = clefs_keys , 
+        barlines = barlines, 
+        groups = groups,         
+        notehead = notehead, 
+        notes = notes, 
+        note_id_map = note_id, 
+        staff_pred = staff
+    )
 
     # ---- Build MusicXML ---- #
     logger.info("Building MusicXML document")
     basename = os.path.basename(img_path).replace(".jpg", "").replace(".png", "")
-    builder = MusicXMLBuilder(title=basename.capitalize())
+    builder = MusicXMLBuilder(title=basename.capitalize() 
+                              , notes = notes 
+                              , note_groups = note_groups 
+                              , barlines = barlines 
+                              , rests = rests
+                              , clefs = clefs
+                              , sfns = sfns
+                              , staffs = staffs
+                              )
     builder.build()
     xml = builder.to_musicxml()
 
@@ -233,10 +294,17 @@ def extract(args):
     duration = time.time() - start_time 
     print("Total time:", duration)
     
-    img = teaser()
+    img = teaser(
+        ori_img =  image
+        , notes  = notes 
+        , groups = note_groups 
+        , barlines = barlines 
+        , clefs = clefs 
+        , sfns  = sfns
+        , rests = rests
+    )
     img.save(out_path.replace(".musicxml", "_teaser.png"))
-    
-    
+    clear_data()
     return out_path, xml
 
 
@@ -311,8 +379,7 @@ def main():
 
     clear_data()
     mxl_path, xml_result = extract(args)
-    img = teaser()
-    img.save(mxl_path.replace(".musicxml", "_teaser.png"))
+    # img.save(mxl_path.replace(".musicxml", "_teaser.png"))
     return xml_result
 
 if __name__ == "__main__":

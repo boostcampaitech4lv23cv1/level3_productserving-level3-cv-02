@@ -317,9 +317,16 @@ def init_zones(staff_pred, splits):
     return np.array(zones, dtype=object), left_bound, right_bound, bottom_bound
 
 
-def extract(splits=8, line_threshold=0.8, horizontal_diff_th=0.1, unit_size_diff_th=0.1, barline_min_degree=75):
+def extract(splits=8, line_threshold=0.8, horizontal_diff_th=0.1, unit_size_diff_th=0.1, barline_min_degree=75
+            , staff_pred = None
+            , symbols = None
+            , stems = None
+            , notehead = None
+            , clefs = None
+            , global_flag = False
+            ):
     # Fetch parameters from layers
-    staff_pred = layers.get_layer('staff_pred')
+    # staff_pred = layers.get_layer('staff_pred')
 
     # Start process
     zones, *_ = init_zones(staff_pred, splits=splits)
@@ -334,7 +341,13 @@ def extract(splits=8, line_threshold=0.8, horizontal_diff_th=0.1, unit_size_diff
     all_staffs = align_staffs(all_staffs)
 
     # Use barline information to infer the number of tracks for each group.
-    num_track = further_infer_track_nums(all_staffs, min_degree=barline_min_degree)
+    num_track = further_infer_track_nums(all_staffs, 
+                                         min_degree=barline_min_degree,
+                                         symbols = symbols ,
+                                         stems = stems,
+                                         notehead = notehead,
+                                         clefs = clefs
+                                         )
     logger.debug(f"Tracks: {num_track}")
     for col_sts in all_staffs:
         for idx, st in enumerate(col_sts):
@@ -594,12 +607,16 @@ def align_staffs(staffs, max_dist_ratio=3):
     return grid
 
 
-def further_infer_track_nums(staffs, min_degree=75):
+def further_infer_track_nums(staffs, min_degree=75, 
+                             symbols = None, 
+                             stems = None, 
+                             notehead = None, 
+                             clefs = None):
     # Fetch parameters
-    symbols = layers.get_layer('symbols_pred')
-    stems = layers.get_layer('stems_rests_pred')
-    notehead = layers.get_layer('notehead_pred')
-    clefs = layers.get_layer('clefs_keys_pred')
+    # symbols = layers.get_layer('symbols_pred')
+    # stems = layers.get_layer('stems_rests_pred')
+    # notehead = layers.get_layer('notehead_pred')
+    # clefs = layers.get_layer('clefs_keys_pred')
 
     mix = symbols - stems - notehead - clefs
     mix[mix<0] = 0
@@ -619,7 +636,7 @@ def further_infer_track_nums(staffs, min_degree=75):
     h_ratios = []
     for box in bboxes:
         h = box[3] - box[1]
-        unit_size = naive_get_unit_size(staffs, *get_center(box))
+        unit_size = naive_get_unit_size(staffs = staffs, *get_center(box))
         if h > unit_size:
             h_ratios.append(h / unit_size)
     h_ratios = np.array(h_ratios)
@@ -679,7 +696,7 @@ def get_barline_map(symbols, bboxes):
     return img
 
 
-def naive_get_unit_size(staffs, x, y):
+def naive_get_unit_size(x, y, staffs):
     flat_staffs = staffs.reshape(-1, 1).squeeze()
 
     def dist(st):

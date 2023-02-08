@@ -76,6 +76,7 @@ function delButton() {
         slideImg = document.querySelectorAll('.slides li'); //변경된 리스트
         slideCnt = slideImg.length;
         moveImages(-1, curIdx);
+        location.replace("/index")
     }
 }
 
@@ -109,7 +110,6 @@ async function addImages(files){
 }
 
 function createElement(e, file) {
-    debugger;
     console.log("createElemete:: ", file);
     const li = document.createElement('li');
     const img = document.createElement('img');
@@ -125,13 +125,15 @@ function createElement(e, file) {
 
   /* 파일 제출 시 확인 코드 */
   function submitConfirm(e){
-    debugger;
     let fileCnt = images.files.length;
     if(fileCnt==0){
         alert('한 개 이상의 파일을 업로드 해주세요.');
         return false;
     }
-    if(confirm(`${fileCnt}개의 이미지를 변환하시겠습니까?`)){
+    if(confirm(`이미지를 변환하시겠습니까?`)){
         document.submitFrm.submit();
     }
+    // if(confirm(`${fileCnt}개의 이미지를 변환하시겠습니까?`)){
+    //     document.submitFrm.submit();
+    // }
   }

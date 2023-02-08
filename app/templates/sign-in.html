@@ -10,6 +10,7 @@
 
   <link href="{{url_for('static', path='/css/bootstrap.min.css')}}" rel="stylesheet">
   <link href="{{url_for('static', path='/css/sign-form.css')}}" rel="stylesheet">
+  <link rel="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css">
 
   <meta name="theme-color" content="#82c96b">
 
@@ -18,8 +19,7 @@
 <body class="text-center">
 
   <main class="standard-form w-100 m-auto">
-    <form>
-
+    <form action="/" method="get">
       <a href="/" class="Maestro-logo">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-file-music"
           viewBox="0 0 16 16">
@@ -32,26 +32,55 @@
         </svg>
         <strong>Maestro</strong>
       </a>
-
-      <h3 class="display2">Sign in</h2>
-
-        <div class="form-floating">
-          <input type="email" name="top" class="form-control" id="floatingInput" placeholder="name@example.com">
-          <label for="floatingInput">Email address</label>
-        </div>
-        <div class="form-floating">
-          <input type="password" name="bottom" class="form-control" id="floatingPassword" placeholder="Password">
-          <label for="floatingPassword">Password</label>
-        </div>
-
-        <p><input type="submit" value="Sign in" onclick="signIn();" class="w-100 btn btn-lg btn-primary"></p>
-
-        <p class="text-4 text-muted">Don't have an account? <a href="/sign-up">sign up</a>.</p>
-
     </form>
+
+      <h3 class="display2">Sign in</h3>
+        <form name="form_ex" class="margin-top-20" action="/index" method="post" enctype="multipart/form-data">
+          <div class="form-floating">
+            <input type="email" name="user_email" class="form-control" id="user_email" placeholder="name@example.com">
+            <label for="floatingInput">Email address</label>
+          </div>
+          <div class="form-floating">
+            <input type="password" name="user_pwd" class="form-control" id="password_check" placeholder="Password">
+            <label for="floatingPassword">Password</label>
+            <div class="eyes">
+              <i class="fa fa-eye fa-lg"></i>
+            </div>
+          </div>
+
+          <p><input type="submit" value="Sign in" class="submit-btn w-100 btn btn-lg btn-primary">
+          </p>
+
+          <p class="text-4 text-muted">Don't have an account? <a href="/sign-up">sign up</a>.</p>
+        </form>
   </main>
 
-  <script src="{{url_for('static', path='/js/sign-form.js')}}"></script>
+  <script src="{{url_for('static', path='/js/sign.js')}}"></script>
+
+  <script>
+    const form = document.querySelector('#sign-in-form');
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const userEmail = document.querySelector('#user-email').value;
+      const userPassword = document.querySelector('#password_check').value;
+
+      fetch('/checkpw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_email: userEmail, password_check: userPassword }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.result) {
+            document.submitFrm.submit();
+          } else {
+            alert('패스워드가 일치하지 않습니다.');
+            return false;
+          }
+        });
+    });
+
+  </script>
 
 </body>
 

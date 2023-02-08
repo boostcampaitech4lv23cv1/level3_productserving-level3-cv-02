@@ -170,10 +170,12 @@ def filter_notehead_bbox(
     max_h_ratio=5,
     min_w_ratio=0.3,
     max_w_ratio=3,
-    min_area_ratio=0.5):
+    min_area_ratio=0.5, 
+    zones = None, 
+    staffs = None):
 
     # Fetch parameters
-    zones = layers.get_layer('zones')
+    # zones = layers.get_layer('zones')
 
     # Start process
     # Get the left and right bound.
@@ -183,7 +185,7 @@ def filter_notehead_bbox(
     valid_bboxes = []
     for bbox in bboxes:
         cen_x, cen_y = get_center(bbox)
-        unit_size = get_unit_size(cen_x, cen_y)
+        unit_size = get_unit_size(cen_x, cen_y, staffs = staffs)
 
         # Check x-axis
         if (cen_x < min_x + nhc.CLEF_ZONE_WIDTH_UNIT_RATIO*unit_size) or (cen_x > max_x):
@@ -216,7 +218,9 @@ def get_notehead_bbox(
     max_h_ratio=5,
     min_w_ratio=0.3,
     max_w_ratio=3,
-    min_area_ratio=0.6):
+    min_area_ratio=0.6, 
+    zones = None, 
+    staffs = None):
 
     logger.debug("Morph noteheads")
     note = morph_notehead(pred, unit_size=global_unit_size)
@@ -224,7 +228,7 @@ def get_notehead_bbox(
     bboxes = rm_merge_overlap_bbox(bboxes)
     result_bboxes = []
     for box in bboxes:
-        unit_size = get_unit_size(*get_center(box))
+        unit_size = get_unit_size(*get_center(box), staffs = staffs)
         box = check_bbox_size(box, pred, unit_size)
         result_bboxes.extend(box)
     logger.debug("Detected noteheads: %d", len(result_bboxes))
@@ -237,7 +241,9 @@ def get_notehead_bbox(
         max_h_ratio=max_h_ratio,
         min_w_ratio=min_w_ratio,
         max_w_ratio=max_w_ratio,
-        min_area_ratio=min_area_ratio
+        min_area_ratio=min_area_ratio, 
+        zones = zones, 
+        staffs = staffs
     )
     logger.debug("Detected noteheads after filtering: %d", len(bboxes))
     return bboxes
@@ -298,7 +304,7 @@ def fill_hole(region):
     return tar
 
 
-def gen_notes(bboxes, symbols):
+def gen_notes(bboxes, symbols, staffs = None):
     notes = []
     for bbox in bboxes:
         # Instanitiate notehead.
@@ -319,7 +325,7 @@ def gen_notes(bboxes, symbols):
             nn.track = st.track
 
         cen_x, cen_y = get_center(bbox)
-        st1, st2 = find_closest_staffs(cen_x, cen_y)
+        st1, st2 = find_closest_staffs(cen_x, cen_y, staffs = staffs)
         if (st1.y_center == st2.y_center) \
                 or (st1.y_upper <= cen_y <= st1.y_lower):
             assign_group_track(st1)
@@ -366,9 +372,9 @@ def gen_notes(bboxes, symbols):
     return notes
 
 
-def parse_stem_info(notes):
+def parse_stem_info(notes, stems = None):
     # Fetch parameters
-    stems = layers.get_layer('stems_rests_pred')
+    # stems = layers.get_layer('stems_rests_pred')
 
     ker = np.ones((3, 2), dtype=np.uint8)
     enhanced_stems = cv2.dilate(stems.astype(np.uint8), ker)
@@ -409,13 +415,19 @@ def extract(
     min_area_ratio=0.5,
     max_whole_note_width_factor=1.5,
     y_dist_factor=5,
-    hollow_filled_ratio_th=1.3):
+    hollow_filled_ratio_th=1.3, 
+    pred = None, 
+    symbols = None, 
+    zones = None, 
+    staffs = None, 
+    stems = None    
+    ):
 
     # Fetch parameters from layers
-    pred = layers.get_layer('notehead_pred')
-    symbols = layers.get_layer('symbols_pred')
+    # pred = layers.get_layer('notehead_pred')
+    # symbols = layers.get_layer('symbols_pred')
 
-    unit_size = get_global_unit_size()
+    unit_size = get_global_unit_size(staffs = staffs)
     logger.info("Analyzing notehead bboxes")
     bboxes = get_notehead_bbox(
         pred,
@@ -424,7 +436,9 @@ def extract(
         max_h_ratio=max_h_ratio,
         min_w_ratio=min_w_ratio,
         max_w_ratio=max_w_ratio,
-        min_area_ratio=min_area_ratio
+        min_area_ratio=min_area_ratio,
+        zones = zones, 
+        staffs = staffs
     )
 
     global nn_img
@@ -456,8 +470,8 @@ def extract(
 
     # Assign notes with extracted infromation
     logger.info("Instanitiating notes")
-    solid_notes = gen_notes(solid_box, symbols)
-    hollow_notes = gen_notes(hollow_box, symbols)
+    solid_notes = gen_notes(solid_box, symbols, staffs = staffs)
+    hollow_notes = gen_notes(hollow_box, symbols, staffs = staffs)
 
     logger.debug("Setting temporary note type")
     for idx in range(len(hollow_notes)):
@@ -465,7 +479,7 @@ def extract(
 
     logger.debug("Parsing whether stem is on the right")
     notes = solid_notes + hollow_notes
-    parse_stem_info(notes)
+    parse_stem_info(notes, stems = stems)
 
     return notes
 
@@ -481,6 +495,28 @@ def draw_notes(notes, ori_img):
         if note.label:
             cv2.putText(img, note.label.name[0], (x2+2, y2), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 1)
     return img
+
+
+def prepare_input(
+    staff = None, 
+    symbols = None, 
+    stems = None, 
+    notehead = None, 
+    ori_img = None
+):
+    aa = np.ones(staff.shape + (3,)) * 255
+    idx = np.where(notehead+stems > 0)
+    aa[idx[0], idx[1]] = 0
+    
+    
+    notes = extract(
+        pred =  notehead,
+        symbols = symbols
+    )
+    rr = draw_notes(notes, aa)
+        
+    return staff, symbols, stems, notehead, ori_img
+
 
 
 if __name__ == "__main__":

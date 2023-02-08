@@ -69,8 +69,8 @@ def count(data, intervals):
     return occur
 
 
-def find_closest_staffs(x, y):  # -> Tuple([Staff, Staff]):
-    staffs = layers.get_layer('staffs')
+def find_closest_staffs(x, y, staffs = None):  # -> Tuple([Staff, Staff]):
+    # staffs = layers.get_layer('staffs')
 
     staffs = staffs.reshape(-1, 1).squeeze()
     diffs = sorted(staffs, key=lambda st: st - [x, y])
@@ -101,8 +101,8 @@ def find_closest_staffs(x, y):  # -> Tuple([Staff, Staff]):
             return first, first
 
 
-def get_unit_size(x, y):
-    st1, st2 = find_closest_staffs(x, y)
+def get_unit_size(x, y, staffs = None):
+    st1, st2 = find_closest_staffs(x, y, staffs = staffs)
     if st1.y_center == st2.y_center:
         return st1.unit_size
 
@@ -120,8 +120,8 @@ def get_unit_size(x, y):
     return unit_size
 
 
-def get_global_unit_size():
-    staffs = layers.get_layer('staffs')
+def get_global_unit_size(staffs = None):
+    # staffs = layers.get_layer('staffs')
     usize = []
     for st in staffs.reshape(-1, 1).squeeze():
         usize.append(st.unit_size)
@@ -129,8 +129,8 @@ def get_global_unit_size():
     return layers._global_unit_size
 
 
-def get_total_track_nums():
-    staffs = layers.get_layer('staffs')
+def get_total_track_nums(staffs = None):
+    # staffs = layers.get_layer('staffs')
     tracks = [st.track for st in staffs.reshape(-1, 1).squeeze()]
     return len(set(tracks))
 

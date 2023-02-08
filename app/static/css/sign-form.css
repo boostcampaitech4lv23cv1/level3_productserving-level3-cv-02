@@ -23,6 +23,16 @@ body {
   background-color: #f5f5f5;
 }
 
+.submit-btn {
+  border: darkolivegreen;
+  background-color: darkolivegreen;
+}
+
+.submit-btn:hover {
+  border: darkolivegreen;
+  background-color: darkolivegreen;
+}
+
 .standard-form {
   max-width: 330px;
   padding: 15px;
@@ -32,13 +42,13 @@ body {
   z-index: 2;
 }
 
-.standard-form input[name="top"] {
+.standard-form input[type="email"] {
   margin-bottom: -1px;
   border-bottom-right-radius: 0;
   border-bottom-left-radius: 0;
 }
 
-.standard-form input[name="middle"] {
+.standard-form input[id="user_password"] {
   margin-bottom: -1px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
@@ -46,9 +56,19 @@ body {
   border-bottom-left-radius: 0;
 }
 
-.standard-form input[name="bottom"] {
+.standard-form input[id="password_check"] {
   margin-bottom: 10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 
+.eyes {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto 2px;
+  height: 50px;
+  font-size: 22px;
+  cursor: pointer;
+}
