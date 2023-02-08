@@ -30,7 +30,7 @@ from db.service import users as users_service
 from db.models import image as image_model
 from constant import DEFAULT_EMAIL
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 
 #crud router 추가
 app.include_router(users.router)
